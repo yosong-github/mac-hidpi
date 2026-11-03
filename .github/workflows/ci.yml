@@ -1,0 +1,154 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version without the v prefix, for example 1.2.3"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hidpi-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    name: Test and build
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: SwiftLint
+        run: |
+          brew install swiftlint
+          swiftlint lint --strict
+
+      - name: swift-format
+        run: xcrun swift-format lint --strict --recursive Sources Tests
+
+      - name: Unit tests
+        run: swift test
+
+      - name: Build app bundle
+        run: scripts/build-app.sh 0.0.0
+
+      - name: Check bundle
+        run: |
+          set -euo pipefail
+          APP="dist/HiDPI.app"
+          BIN="$APP/Contents/MacOS/HiDPI"
+          test -x "$BIN"
+          test -d "$APP/Contents/Frameworks/Sparkle.framework"
+          archs="$(lipo -archs "$BIN")"
+          [[ "$archs" == *arm64* ]]
+          [[ "$archs" == *x86_64* ]]
+          test "$(plutil -extract CFBundleShortVersionString raw -o - "$APP/Contents/Info.plist")" = "0.0.0"
+          test "$(plutil -extract CFBundleVersion raw -o - "$APP/Contents/Info.plist")" = "0.0.0"
+          test "$(plutil -extract LSUIElement raw -o - "$APP/Contents/Info.plist")" = "true"
+          test "$(plutil -extract CFBundleIdentifier raw -o - "$APP/Contents/Info.plist")" = "com.yosong.mac-hidpi"
+          if plutil -extract SUPublicEDKey raw -o - "$APP/Contents/Info.plist" >/dev/null 2>&1; then
+            echo "Placeholder builds must omit SUPublicEDKey" >&2
+            exit 1
+          fi
+          codesign --verify --verbose=2 "$APP"
+          linked="$(otool -L "$BIN")"
+          [[ "$linked" == *Sparkle* ]]
+          TOOL=""
+          while IFS= read -r candidate; do
+            TOOL="$candidate"
+            break
+          done < <(find .build -type f -name hidpi-appcast ! -path '*dSYM*')
+          test -n "$TOOL"
+          "$TOOL" \
+            --version 0.0.1 \
+            --feed-url "https://example.com/appcast.xml" \
+            --enclosure-url "https://example.com/HiDPI-0.0.1.zip" \
+            --length 12 \
+            --output /tmp/appcast.xml
+          grep -q "<sparkle:version>0.0.1</sparkle:version>" /tmp/appcast.xml
+          grep -q 'length="12"' /tmp/appcast.xml
+
+  release:
+    name: Package and publish
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: macos-26
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve version
+        id: version
+        run: |
+          set -euo pipefail
+          source scripts/lib.sh
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            if [[ "${GITHUB_REF}" != "refs/heads/${{ github.event.repository.default_branch }}" ]]; then
+              echo "Run the release workflow from the default branch." >&2
+              exit 1
+            fi
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          fi
+          validate_version "$VERSION"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Package dmg, zip, and appcast
+        env:
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: scripts/package-release.sh "${{ steps.version.outputs.version }}"
+
+      - name: Tag workflow_dispatch release
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git rev-parse --verify "refs/tags/v${VERSION}" >/dev/null 2>&1; then
+            echo "Tag v${VERSION} already exists."
+          else
+            git tag -a "v${VERSION}" -m "HiDPI ${VERSION}"
+            git push origin "v${VERSION}"
+          fi
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: HiDPI ${{ steps.version.outputs.version }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            dist/HiDPI-${{ steps.version.outputs.version }}.dmg
+            dist/HiDPI-${{ steps.version.outputs.version }}.zip
+            dist/appcast.xml
+          body: |
+            ## 安装
+
+            下载 `HiDPI-${{ steps.version.outputs.version }}.dmg`，把 HiDPI.app 拖到「应用程序」。
+
+            若系统提示已损坏或无法打开：在「应用程序」里右键 HiDPI → 打开，或在终端执行 `xattr -cr /Applications/HiDPI.app`。
+
+            自动更新读取本次 Release 里的 `appcast.xml`，并下载同名的 zip。未配置 Sparkle 私钥时 appcast 不会带签名，客户端会拒绝安装。
