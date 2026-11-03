@@ -21,7 +21,7 @@ only_rules:
   - legacy_constant
   - legacy_constructor
   - mark
-  - operator_whitespace
+  - function_name_whitespace
   - redundant_nil_coalescing
   - redundant_void_return
   - return_arrow_whitespace
@@ -34,9 +34,3 @@ only_rules:
   - unused_optional_binding
   - vertical_whitespace
   - void_return
-
-line_length:
-  warning: 140
-  error: 200
-
-reporter: "github-actions"
