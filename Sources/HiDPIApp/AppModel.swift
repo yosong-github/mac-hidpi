@@ -140,33 +140,44 @@ final class AppModel: ObservableObject {
         return label
     }
 
-    /// Same line BetterDisplay shows: the looks-like resolution, which must not change
-    /// when the HiDPI toggle goes on at the native size.
+    /// Looks-like size, matching BetterDisplay's「分辨率 2560 × 1440」. The toggle must not change it.
     func resolutionLine(_ display: MenuDisplay) -> String {
-        let snapshot = display.snapshot
         if display.isEnabled, let applied = display.applied {
-            let tag = applied.isHiDPI ? "HiDPI" : "非 HiDPI"
-            return "分辨率 \(applied.width) × \(applied.height) · \(tag)"
+            return "分辨率 \(applied.width) × \(applied.height)"
         }
         if let active = display.activeMode {
-            return "分辨率 \(active.logicalWidth) × \(active.logicalHeight) · HiDPI"
-        }
-        if let current = snapshot.currentMode {
-            let tag = current.isHiDPI ? "HiDPI" : "非 HiDPI"
-            return "分辨率 \(current.width) × \(current.height) · \(tag)"
-        }
-        return "分辨率 \(snapshot.panel.width) × \(snapshot.panel.height)"
-    }
-
-    /// Point size versus framebuffer, so a 1× mode cannot be mistaken for 2×.
-    func diagnosticLine(_ display: MenuDisplay) -> String? {
-        if let applied = display.applied {
-            return "绘制 \(applied.width) × \(applied.height) 点，\(applied.pixelWidth) × \(applied.pixelHeight) 像素"
+            return "分辨率 \(active.logicalWidth) × \(active.logicalHeight)"
         }
         if let current = display.snapshot.currentMode {
-            return "绘制 \(current.width) × \(current.height) 点，\(current.pixelWidth) × \(current.pixelHeight) 像素"
+            return "分辨率 \(current.width) × \(current.height)"
+        }
+        let panel = display.snapshot.panel
+        return "分辨率 \(panel.width) × \(panel.height)"
+    }
+
+    /// Whole-desktop backing scale. 2× means every window is drawn at twice the pixels, not just text.
+    func diagnosticLine(_ display: MenuDisplay) -> String? {
+        if let applied = display.applied {
+            return backingLine(applied)
+        }
+        if let current = display.snapshot.currentMode {
+            return backingLine(current)
         }
         return nil
+    }
+
+    private func backingLine(_ mode: DisplayModeSummary) -> String {
+        let scale: String
+        if mode.pixelWidth == mode.width * 2 && mode.pixelHeight == mode.height * 2 {
+            scale = "2×"
+        } else if mode.pixelWidth == mode.width && mode.pixelHeight == mode.height {
+            scale = "1×"
+        } else {
+            scale = "非整数"
+        }
+        let points = "\(mode.width) × \(mode.height)"
+        let pixels = "\(mode.pixelWidth) × \(mode.pixelHeight)"
+        return "整个桌面 \(scale)：\(points) 点，\(pixels) 像素"
     }
 
     private func scheduleRefresh() {
