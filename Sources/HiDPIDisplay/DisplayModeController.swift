@@ -68,22 +68,20 @@ enum DisplayModeController {
         }
         let array = raw as NSArray
         var modes: [CGDisplayMode] = []
+        modes.reserveCapacity(array.count)
         for index in 0..<array.count {
-            let item = array[index]
-            if let mode = item as? CGDisplayMode {
-                modes.append(mode)
-            }
+            modes.append(array[index] as CGDisplayMode)
         }
         return modes
     }
 
     private static func summary(of mode: CGDisplayMode) -> DisplayModeSummary {
         DisplayModeSummary(
-            width: CGDisplayModeGetWidth(mode),
-            height: CGDisplayModeGetHeight(mode),
-            pixelWidth: CGDisplayModeGetPixelWidth(mode),
-            pixelHeight: CGDisplayModeGetPixelHeight(mode),
-            refreshRate: CGDisplayModeGetRefreshRate(mode)
+            width: mode.width,
+            height: mode.height,
+            pixelWidth: mode.pixelWidth,
+            pixelHeight: mode.pixelHeight,
+            refreshRate: mode.refreshRate
         )
     }
 }

@@ -5,7 +5,7 @@ public enum DisplayObserver {
     public static let changed = Notification.Name("com.yosong.mac-hidpi.displaysChanged")
 
     private static let callback: CGDisplayReconfigurationCallBack = { _, flags, _ in
-        if flags.contains(.beginConfiguration) {
+        if flags.contains(.beginConfigurationFlag) {
             return
         }
         DispatchQueue.main.async {

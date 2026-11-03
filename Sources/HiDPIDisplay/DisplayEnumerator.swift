@@ -77,6 +77,6 @@ public enum DisplayEnumerator {
         guard let mode = CGDisplayCopyDisplayMode(displayID) else {
             return 60
         }
-        return CGDisplayModeGetRefreshRate(mode)
+        return mode.refreshRate
     }
 }

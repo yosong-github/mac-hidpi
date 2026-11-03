@@ -14,31 +14,27 @@ enum VirtualDisplayClient {
                 HDVirtualModeRefreshKey: NSNumber(value: mode.refreshRate),
             ]
         }
-        var error: NSError?
-        guard
-            let display =
-                HDVirtualDisplay(
-                    name: spec.name,
-                    maxPixelsWide: u32(spec.maxPixelsWide),
-                    maxPixelsHigh: u32(spec.maxPixelsHigh),
-                    widthMillimeters: spec.widthMillimeters,
-                    heightMillimeters: spec.heightMillimeters,
-                    vendorID: spec.vendorID,
-                    productID: spec.productID,
-                    serialNum: spec.serialNumber,
-                    hiDPI: spec.hiDPI,
-                    modes: modes,
-                    error: &error
-                )
-        else {
-            // HDVirtualDisplayErrorAPIUnavailable == 1. Compare the code so a Swift
-            // rename of the imported enum cannot hide "API missing".
-            if error?.domain == HDVirtualDisplayErrorDomain && error?.code == 1 {
+        do {
+            // NSError ** is imported as a throwing initializer, so there is no error: argument.
+            return try HDVirtualDisplay(
+                name: spec.name,
+                maxPixelsWide: u32(spec.maxPixelsWide),
+                maxPixelsHigh: u32(spec.maxPixelsHigh),
+                widthMillimeters: spec.widthMillimeters,
+                heightMillimeters: spec.heightMillimeters,
+                vendorID: spec.vendorID,
+                productID: spec.productID,
+                serialNum: spec.serialNumber,
+                hiDPI: spec.hiDPI,
+                modes: modes
+            )
+        } catch let error as NSError {
+            // HDVirtualDisplayErrorAPIUnavailable == 1.
+            if error.domain == HDVirtualDisplayErrorDomain && error.code == 1 {
                 throw HiDPIError.apiUnavailable
             }
-            throw HiDPIError.creationFailed(error?.localizedDescription ?? "unknown")
+            throw HiDPIError.creationFailed(error.localizedDescription)
         }
-        return display
     }
 
     private static func u32(_ value: Int) -> UInt32 {
