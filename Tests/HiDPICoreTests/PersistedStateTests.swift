@@ -19,10 +19,10 @@ final class PersistedStateTests: XCTestCase {
 
     func testOldDefaultDoesNotRestoreAsNative() {
         let key = DisplayKey(vendorID: 1, productID: 2, serialNumber: 3, unitNumber: 4)
-        let json = """
-        {"sessions":[{"key":{"vendorID":1,"productID":2,"serialNumber":3,"unitNumber":4},\
-        "logicalWidth":1920,"logicalHeight":1080}]}
-        """
+        let json =
+            "{\"sessions\":[{\"key\":{\"vendorID\":1,\"productID\":2,"
+            + "\"serialNumber\":3,\"unitNumber\":4},"
+            + "\"logicalWidth\":1920,\"logicalHeight\":1080}]}"
         let state = PersistedState.decode(from: Data(json.utf8))
         XCTAssertEqual(state.sessions.count, 1)
         XCTAssertFalse(state.sessions[0].explicitScale)
