@@ -34,12 +34,7 @@ public enum ModeMatching {
         refreshRate: Double
     ) -> DisplayModeSummary? {
         let targetRefresh = ResolutionPlan.normalizedRefreshRate(refreshRate)
-        let matches = modes.filter { mode in
-            mode.width == logicalWidth
-                && mode.height == logicalHeight
-                && mode.pixelWidth == logicalWidth * 2
-                && mode.pixelHeight == logicalHeight * 2
-        }
+        let matches = modes.filter { isExactHiDPI($0, logicalWidth: logicalWidth, logicalHeight: logicalHeight) }
         return matches.min { lhs, rhs in
             let left = abs(lhs.refreshRate - targetRefresh)
             let right = abs(rhs.refreshRate - targetRefresh)
@@ -48,6 +43,19 @@ public enum ModeMatching {
             }
             return left < right
         }
+    }
+
+    /// Point size matches the request and the framebuffer is exactly twice that.
+    /// A 2560×1440 mode whose pixels are also 2560×1440 is rejected.
+    public static func isExactHiDPI(
+        _ mode: DisplayModeSummary,
+        logicalWidth: Int,
+        logicalHeight: Int
+    ) -> Bool {
+        mode.width == logicalWidth
+            && mode.height == logicalHeight
+            && mode.pixelWidth == logicalWidth * 2
+            && mode.pixelHeight == logicalHeight * 2
     }
 
     public static func describe(_ modes: [DisplayModeSummary]) -> String {

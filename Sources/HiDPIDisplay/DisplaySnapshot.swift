@@ -13,6 +13,8 @@ public struct DisplaySnapshot: Equatable, Identifiable, Sendable {
     public var isOurs: Bool
     public var presets: [ScaledMode]
     public var defaultMode: ScaledMode?
+    /// The mode macOS is using right now. `width`/`height` are the looks-like size.
+    public var currentMode: DisplayModeSummary?
 
     public init(
         displayID: CGDirectDisplayID,
@@ -24,7 +26,8 @@ public struct DisplaySnapshot: Equatable, Identifiable, Sendable {
         isBuiltIn: Bool,
         isOurs: Bool,
         presets: [ScaledMode],
-        defaultMode: ScaledMode?
+        defaultMode: ScaledMode?,
+        currentMode: DisplayModeSummary? = nil
     ) {
         self.displayID = displayID
         self.key = key
@@ -36,6 +39,20 @@ public struct DisplaySnapshot: Equatable, Identifiable, Sendable {
         self.isOurs = isOurs
         self.presets = presets
         self.defaultMode = defaultMode
+        self.currentMode = currentMode
+    }
+
+    /// Rebuild presets from the panel size captured before HiDPI was turned on.
+    public func locked(to panel: PanelPixels) -> DisplaySnapshot {
+        guard panel != self.panel else {
+            return self
+        }
+        let presets = ResolutionPlan.presets(for: panel)
+        var copy = self
+        copy.panel = panel
+        copy.presets = presets
+        copy.defaultMode = ResolutionPlan.defaultPreset(for: panel, presets: presets)
+        return copy
     }
 
     public var id: String {

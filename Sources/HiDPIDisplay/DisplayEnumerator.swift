@@ -53,7 +53,8 @@ public enum DisplayEnumerator {
             isBuiltIn: builtIn,
             isOurs: ours,
             presets: presets,
-            defaultMode: ResolutionPlan.defaultPreset(for: panel, presets: presets)
+            defaultMode: ResolutionPlan.defaultPreset(for: panel, presets: presets),
+            currentMode: DisplayModeController.currentSummary(for: displayID)
         )
     }
 
@@ -74,9 +75,6 @@ public enum DisplayEnumerator {
     }
 
     static func currentRefresh(_ displayID: CGDirectDisplayID) -> Double {
-        guard let mode = CGDisplayCopyDisplayMode(displayID) else {
-            return 60
-        }
-        return mode.refreshRate
+        DisplayModeController.currentSummary(for: displayID)?.refreshRate ?? 60
     }
 }

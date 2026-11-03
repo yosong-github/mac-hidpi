@@ -9,6 +9,7 @@ final class ResolutionPlanTests: XCTestCase {
         XCTAssertEqual(
             logical,
             [
+                "2560x1440",
                 "2048x1152",
                 "1920x1080",
                 "1706x960",
@@ -23,15 +24,31 @@ final class ResolutionPlanTests: XCTestCase {
             XCTAssertEqual(mode.logicalWidth % 2, 0)
             XCTAssertEqual(mode.logicalHeight % 2, 0)
         }
-        XCTAssertTrue(presets[4].isPixelAligned(with: panel))
-        XCTAssertFalse(presets[1].isPixelAligned(with: panel))
+        let native = presets[0]
+        XCTAssertEqual(native.pixelWidth, 5120)
+        XCTAssertEqual(native.pixelHeight, 2880)
+        XCTAssertTrue(ResolutionPlan.isNativeLooksLike(native, on: panel))
+        XCTAssertFalse(native.isPixelAligned(with: panel))
+        XCTAssertTrue(presets[5].isPixelAligned(with: panel))
     }
 
-    func testDefaultOn1440pIs1920x1080() {
+    func testDefaultOn1440pKeepsNativeLooksLikeSize() {
         let panel = PanelPixels(width: 2560, height: 1440)
         let presets = ResolutionPlan.presets(for: panel)
         let chosen = ResolutionPlan.defaultPreset(for: panel, presets: presets)
-        XCTAssertEqual(chosen, ScaledMode(logicalWidth: 1920, logicalHeight: 1080, scale: 2))
+        XCTAssertEqual(chosen, ScaledMode(logicalWidth: 2560, logicalHeight: 1440, scale: 2))
+        let attempts = ResolutionPlan.attempts(
+            displayName: "QHD",
+            panel: panel,
+            mode: chosen ?? ScaledMode(logicalWidth: 1, logicalHeight: 1),
+            refreshRate: 60,
+            identity: DisplayKey(vendorID: 1, productID: 2, serialNumber: 3, unitNumber: 0)
+        )
+        XCTAssertEqual(attempts[0].kind, .logicalPoints)
+        XCTAssertEqual(attempts[0].spec.maxPixelsWide, 5120)
+        XCTAssertEqual(attempts[0].spec.maxPixelsHigh, 2880)
+        XCTAssertEqual(attempts[0].spec.modes, [VirtualMode(width: 2560, height: 1440, refreshRate: 60)])
+        XCTAssertEqual(attempts[1].spec.modes, [VirtualMode(width: 5120, height: 2880, refreshRate: 60)])
     }
 
     func testPresetsPreserveAspectAndStayInsideFramebufferCap() {

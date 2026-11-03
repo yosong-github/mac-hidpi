@@ -54,33 +54,26 @@ struct MenuContent: View {
         } else if !snapshot.isEligible {
             Text("没有可用的 HiDPI 分辨率")
         } else {
+            Text(model.resolutionLine(display))
+            if let diagnostic = model.diagnosticLine(display) {
+                Text(diagnostic)
+            }
             Toggle(
-                "启用 HiDPI",
+                "高分辨率 (HiDPI)",
                 isOn: Binding(
                     get: { display.isEnabled },
                     set: { model.setEnabled(display, $0) }
                 )
             )
             .disabled(model.isBusy)
-            if display.isEnabled,
-                let current = display.activeMode ?? snapshot.defaultMode ?? snapshot.presets.first
-            {
-                Picker(
-                    "分辨率",
-                    selection: Binding(
-                        get: {
-                            display.activeMode ?? snapshot.defaultMode ?? snapshot.presets.first ?? current
-                        },
-                        set: { model.select(display, mode: $0) }
-                    )
-                ) {
+            if display.isEnabled {
+                Menu("其他分辨率") {
                     ForEach(snapshot.presets) { mode in
-                        Text(model.modeLabel(mode, on: snapshot)).tag(mode)
+                        Button(model.modeLabel(mode, on: snapshot)) {
+                            model.select(display, mode: mode)
+                        }
+                        .disabled(model.isBusy)
                     }
-                }
-                .disabled(model.isBusy)
-                if let active = display.activeMode {
-                    Text("渲染 \(active.pixelWidth)×\(active.pixelHeight)")
                 }
             }
         }

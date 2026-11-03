@@ -22,6 +22,16 @@ public final class HiDPIEngine {
         sessions[key]?.mode
     }
 
+    /// Mode macOS actually applied on the virtual display. Nil when HiDPI is off.
+    public func appliedSummary(for key: DisplayKey) -> DisplayModeSummary? {
+        sessions[key]?.applied
+    }
+
+    /// Panel size captured before mirroring, so a 2× framebuffer is not mistaken for the panel.
+    public func capturedPanel(for key: DisplayKey) -> PanelPixels? {
+        sessions[key]?.panel
+    }
+
     public func activeKeys() -> [DisplayKey] {
         Array(sessions.keys)
     }
@@ -104,11 +114,32 @@ public final class HiDPIEngine {
                 log.error("mode apply failed after mirror: \(error.description)")
                 continue
             }
+            guard
+                let live = DisplayModeController.currentSummary(for: virtual.displayID),
+                ModeMatching.isExactHiDPI(
+                    live,
+                    logicalWidth: mode.logicalWidth,
+                    logicalHeight: mode.logicalHeight
+                )
+            else {
+                let liveLine = DisplayModeController.currentSummary(for: virtual.displayID)?.debugLine ?? "unread"
+                let listed = ModeMatching.describe(DisplayModeController.summaries(for: virtual.displayID))
+                available = "live \(liveLine); \(listed)"
+                _ = MirrorController.stopMirroring(display.displayID)
+                lastError = .modeNotFound(
+                    requested: "\(mode.logicalWidth)x\(mode.logicalHeight) at 2x",
+                    available: available
+                )
+                log.error("live mode is not 2x \(mode.logicalWidth)x\(mode.logicalHeight): \(available)")
+                continue
+            }
             sessions[display.key] = ActiveSession(
                 key: display.key,
                 physicalID: display.displayID,
                 virtual: virtual,
-                mode: mode
+                mode: mode,
+                panel: display.panel,
+                applied: live
             )
             let logical = "\(mode.logicalWidth)x\(mode.logicalHeight)"
             log.info(
@@ -185,11 +216,22 @@ private final class ActiveSession {
     let physicalID: CGDirectDisplayID
     let virtual: HDVirtualDisplay
     let mode: ScaledMode
+    let panel: PanelPixels
+    let applied: DisplayModeSummary
 
-    init(key: DisplayKey, physicalID: CGDirectDisplayID, virtual: HDVirtualDisplay, mode: ScaledMode) {
+    init(
+        key: DisplayKey,
+        physicalID: CGDirectDisplayID,
+        virtual: HDVirtualDisplay,
+        mode: ScaledMode,
+        panel: PanelPixels,
+        applied: DisplayModeSummary
+    ) {
         self.key = key
         self.physicalID = physicalID
         self.virtual = virtual
         self.mode = mode
+        self.panel = panel
+        self.applied = applied
     }
 }

@@ -3,6 +3,13 @@ import Foundation
 import HiDPICore
 
 enum DisplayModeController {
+    static func currentSummary(for displayID: CGDirectDisplayID) -> DisplayModeSummary? {
+        guard let mode = CGDisplayCopyDisplayMode(displayID) else {
+            return nil
+        }
+        return summary(of: mode)
+    }
+
     static func summaries(for displayID: CGDirectDisplayID) -> [DisplayModeSummary] {
         cgModes(for: displayID).map(summary(of:))
     }

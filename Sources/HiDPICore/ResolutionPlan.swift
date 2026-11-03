@@ -2,9 +2,9 @@ import Foundation
 
 /// Builds the HiDPI ladder for a panel and the virtual-display descriptors that request one step.
 ///
-/// For a 2560×1440 panel the ladder includes the sizes this app is built around:
-/// 2048×1152, 1920×1080, 1706×960, 1600×900, and pixel-aligned 1280×720.
-/// Each logical size is rendered at 2× and the result is mirrored onto the panel.
+/// Enabling HiDPI keeps the panel's native looks-like size (2560×1440 on a 2560×1440
+/// panel) and renders it at 2× (5120×2880) before the mirror downsamples onto the panel.
+/// Smaller looks-like sizes stay available as optional steps.
 public enum ResolutionPlan {
     /// Vendor ID stamped on virtual displays we create (`HD`).
     public static let virtualVendorID: UInt32 = 0x4844
@@ -18,8 +18,9 @@ public enum ResolutionPlan {
     public static let minLogicalHeight = 480
 
     /// Fractions of the panel's native pixels, as exact ratios.
-    /// 4/5, 3/4, 2/3, 5/8, 1/2 → on 2560×1440: 2048, 1920, 1706, 1600, 1280 wide.
+    /// 1/1, 4/5, 3/4, 2/3, 5/8, 1/2 → on 2560×1440: 2560, 2048, 1920, 1706, 1600, 1280 wide.
     static let factors: [(numerator: Int, denominator: Int)] = [
+        (1, 1),
         (4, 5),
         (3, 4),
         (2, 3),
@@ -66,20 +67,22 @@ public enum ResolutionPlan {
         }
     }
 
-    /// The step closest to 75% of the panel width. On 2560×1440 that is 1920×1080.
+    /// Native looks-like size: same point size as the panel, backed by a 2× framebuffer.
+    /// On 2560×1440 that is 2560×1440 points rendered as 5120×2880.
     public static func defaultPreset(for panel: PanelPixels, presets: [ScaledMode]) -> ScaledMode? {
-        guard panel.width > 0 else {
-            return presets.first
+        if let native = presets.first(where: { isNativeLooksLike($0, on: panel) }) {
+            return native
         }
-        let target = nearestEven(pixels: panel.width, numerator: 3, denominator: 4)
-        return presets.min { lhs, rhs in
-            let left = abs(lhs.logicalWidth - target)
-            let right = abs(rhs.logicalWidth - target)
-            if left == right {
-                return lhs.logicalWidth > rhs.logicalWidth
+        return presets.max { lhs, rhs in
+            if lhs.logicalWidth == rhs.logicalWidth {
+                return lhs.logicalHeight < rhs.logicalHeight
             }
-            return left < right
+            return lhs.logicalWidth < rhs.logicalWidth
         }
+    }
+
+    public static func isNativeLooksLike(_ mode: ScaledMode, on panel: PanelPixels) -> Bool {
+        mode.logicalWidth == panel.width && mode.logicalHeight == panel.height && mode.scale == 2
     }
 
     public static func normalizedRefreshRate(_ hertz: Double) -> Double {

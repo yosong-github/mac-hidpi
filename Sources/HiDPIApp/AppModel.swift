@@ -8,6 +8,8 @@ struct MenuDisplay: Identifiable, Equatable {
     var snapshot: DisplaySnapshot
     var isEnabled: Bool
     var activeMode: ScaledMode?
+    /// Mode read back from the virtual display after it was applied.
+    var applied: DisplayModeSummary?
 
     var id: String {
         snapshot.id
@@ -76,7 +78,8 @@ final class AppModel: ObservableObject {
             return
         }
         if enabled {
-            let mode = display.activeMode ?? display.snapshot.defaultMode
+            // The toggle always keeps the native looks-like size. Scaled sizes are opt-in.
+            let mode = display.snapshot.defaultMode
             guard let mode else {
                 lastError = HiDPIError.noPresets.description
                 return
@@ -118,7 +121,8 @@ final class AppModel: ObservableObject {
                     PersistedSession(
                         key: display.snapshot.key,
                         logicalWidth: mode.logicalWidth,
-                        logicalHeight: mode.logicalHeight
+                        logicalHeight: mode.logicalHeight,
+                        explicitScale: true
                     )
                 )
             )
@@ -126,14 +130,43 @@ final class AppModel: ObservableObject {
     }
 
     func modeLabel(_ mode: ScaledMode, on snapshot: DisplaySnapshot) -> String {
-        var label = "\(mode.logicalWidth)×\(mode.logicalHeight)"
-        if mode == snapshot.defaultMode {
-            label += " · 推荐"
+        var label = "\(mode.logicalWidth) × \(mode.logicalHeight)"
+        if ResolutionPlan.isNativeLooksLike(mode, on: snapshot.panel) {
+            label += " · 原生"
         }
         if mode.isPixelAligned(with: snapshot.panel) {
             label += " · 像素对齐"
         }
         return label
+    }
+
+    /// Same line BetterDisplay shows: the looks-like resolution, which must not change
+    /// when the HiDPI toggle goes on at the native size.
+    func resolutionLine(_ display: MenuDisplay) -> String {
+        let snapshot = display.snapshot
+        if display.isEnabled, let applied = display.applied {
+            let tag = applied.isHiDPI ? "HiDPI" : "非 HiDPI"
+            return "分辨率 \(applied.width) × \(applied.height) · \(tag)"
+        }
+        if let active = display.activeMode {
+            return "分辨率 \(active.logicalWidth) × \(active.logicalHeight) · HiDPI"
+        }
+        if let current = snapshot.currentMode {
+            let tag = current.isHiDPI ? "HiDPI" : "非 HiDPI"
+            return "分辨率 \(current.width) × \(current.height) · \(tag)"
+        }
+        return "分辨率 \(snapshot.panel.width) × \(snapshot.panel.height)"
+    }
+
+    /// Point size versus framebuffer, so a 1× mode cannot be mistaken for 2×.
+    func diagnosticLine(_ display: MenuDisplay) -> String? {
+        if let applied = display.applied {
+            return "绘制 \(applied.width) × \(applied.height) 点，\(applied.pixelWidth) × \(applied.pixelHeight) 像素"
+        }
+        if let current = display.snapshot.currentMode {
+            return "绘制 \(current.width) × \(current.height) 点，\(current.pixelWidth) × \(current.pixelHeight) 像素"
+        }
+        return nil
     }
 
     private func scheduleRefresh() {
@@ -178,13 +211,12 @@ final class AppModel: ObservableObject {
             else {
                 continue
             }
-            let mode =
-                ResolutionPlan.resolveSavedMode(
-                    logicalWidth: session.logicalWidth,
-                    logicalHeight: session.logicalHeight,
+            guard
+                let mode = session.modeToRestore(
+                    panel: display.snapshot.panel,
                     presets: display.snapshot.presets
-                ) ?? display.snapshot.defaultMode
-            guard let mode else {
+                )
+            else {
                 continue
             }
             do {
@@ -216,10 +248,12 @@ final class AppModel: ObservableObject {
         let snapshots = DisplayEnumerator.snapshots()
         engine.dropDisconnected(online: snapshots.map(\.key))
         displays = snapshots.map { snapshot in
-            MenuDisplay(
-                snapshot: snapshot,
+            let locked = engine.capturedPanel(for: snapshot.key).map { snapshot.locked(to: $0) } ?? snapshot
+            return MenuDisplay(
+                snapshot: locked,
                 isEnabled: engine.isActive(snapshot.key),
-                activeMode: engine.activeMode(for: snapshot.key)
+                activeMode: engine.activeMode(for: snapshot.key),
+                applied: engine.appliedSummary(for: snapshot.key)
             )
         }
     }
