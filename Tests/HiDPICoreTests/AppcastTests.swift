@@ -26,7 +26,7 @@ final class AppcastTests: XCTestCase {
         XCTAssertTrue(xml.contains("Thu, 01 Jan 1970 00:00:00 +0000"))
         XCTAssertTrue(xml.contains("url=\"https://example.com/HiDPI-1.2.3.zip?x=1&amp;y=2\""))
         XCTAssertFalse(xml.contains("edSignature"))
-        XCTAssertTrue(xml.contains("A &amp; B"))
+        XCTAssertTrue(xml.contains("A & B"))
         XCTAssertTrue(xml.contains("length=\"42\""))
     }
 
