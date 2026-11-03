@@ -78,6 +78,41 @@ jobs:
           grep -q "<sparkle:version>0.0.1</sparkle:version>" /tmp/appcast.xml
           grep -q 'length="12"' /tmp/appcast.xml
 
+      - name: Package dmg and zip
+        id: package
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          FULL="${PR_HEAD_SHA:-$GITHUB_SHA}"
+          SHORT="${FULL:0:7}"
+          LABEL="0.0.0-${SHORT}"
+          APP="dist/HiDPI.app"
+          ZIP="dist/HiDPI-${LABEL}.zip"
+          DMG="dist/HiDPI-${LABEL}.dmg"
+          rm -f "$ZIP" "$DMG"
+          ditto -c -k --keepParent "$APP" "$ZIP"
+          STAGE="$(mktemp -d)"
+          cp -R "$APP" "$STAGE/HiDPI.app"
+          ln -s /Applications "$STAGE/Applications"
+          hdiutil create -volname "HiDPI" -srcfolder "$STAGE" -ov -format UDZO "$DMG"
+          rm -rf "$STAGE"
+          test -s "$ZIP"
+          test -s "$DMG"
+          echo "label=${LABEL}" >> "$GITHUB_OUTPUT"
+          echo "Packaged ${ZIP} and ${DMG}"
+
+      - name: Upload packaged app
+        uses: actions/upload-artifact@v4
+        with:
+          name: HiDPI-${{ steps.package.outputs.label }}
+          path: |
+            dist/HiDPI-${{ steps.package.outputs.label }}.dmg
+            dist/HiDPI-${{ steps.package.outputs.label }}.zip
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
   release:
     name: Package and publish
     needs: test

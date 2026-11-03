@@ -86,11 +86,13 @@ open dist/HiDPI.app
 
 `swift run HiDPI` 能跑界面，但没有打包进 `.app`，菜单栏行为不完整，也不要拿它做更新测试。
 
+每次 push 和 pull request 的 CI 也会打出安装包，并作为 Actions artifact 上传（保留 14 天），名字是 `HiDPI-0.0.0-<短提交号>`。打开该次运行页面，在底部 Artifacts 里下载。解压后是 `HiDPI-0.0.0-<短提交号>.dmg` 和同名 `.zip`。这是测试包，版本号固定为 `0.0.0`，不是 GitHub Release。正式发布仍由 `v*` 标签触发。
+
 ## 版本与发布
 
 版本只由 git 标签决定，仓库里不另存一个版本号文件。标签必须是 `vMAJOR.MINOR.PATCH`（例如 `v1.2.3`），不要带前导零或 `-beta`。
 
-推送这种标签后，GitHub Actions 会：
+每次 push 和 pull request 都会在测试任务里上传上面的 dmg/zip artifact。推送版本标签后，GitHub Actions 还会：
 
 1. 在 `macos-26` 上跑测试、SwiftLint、swift-format，并打通用二进制
 2. 打出 `HiDPI-<version>.zip`、`HiDPI-<version>.dmg` 和 `appcast.xml`
