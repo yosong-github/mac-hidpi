@@ -67,9 +67,13 @@ enum DisplayModeController {
                 && $0.summary.pixelWidth == pixelWidth
                 && $0.summary.pixelHeight == pixelHeight
         }
-        guard let match = matches.min(by: { lhs, rhs in
-            abs(lhs.summary.refreshRate - refreshRate) < abs(rhs.summary.refreshRate - refreshRate)
-        }) else {
+        guard
+            let match =
+                matches.min(by: { lhs, rhs in
+                    abs(lhs.summary.refreshRate - refreshRate)
+                        < abs(rhs.summary.refreshRate - refreshRate)
+                })
+        else {
             return .failure(
                 .modeNotFound(
                     requested: "\(width)x\(height) pixels \(pixelWidth)x\(pixelHeight)",

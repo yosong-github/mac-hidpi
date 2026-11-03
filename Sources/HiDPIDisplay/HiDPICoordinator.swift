@@ -124,7 +124,8 @@ public final class HiDPICoordinator {
     }
 
     private func switchReal(_ display: DisplaySnapshot, hiDPI: Bool) -> DisplayModeSummary? {
-        let result = hiDPI
+        let result =
+            hiDPI
             ? RealDisplayModeSwitcher.applyHiDPI(displayID: display.displayID, panel: display.panel)
             : RealDisplayModeSwitcher.applyLowDPI(displayID: display.displayID, panel: display.panel)
         guard case let .success(summary) = result else {

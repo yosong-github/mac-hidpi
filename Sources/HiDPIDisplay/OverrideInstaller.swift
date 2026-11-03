@@ -25,21 +25,27 @@ enum OverrideInstaller {
             .appendingPathComponent("hidpi-\(UUID().uuidString).plist")
         try data.write(to: source)
         defer { try? FileManager.default.removeItem(at: source) }
-        guard let command = OverrideInstallScript.installCommand(
-            vendorID: vendorID,
-            productID: productID,
-            sourcePlist: source.path
-        ) else {
+        guard
+            let command =
+                OverrideInstallScript.installCommand(
+                    vendorID: vendorID,
+                    productID: productID,
+                    sourcePlist: source.path
+                )
+        else {
             throw OverrideInstallerError.unsafePath
         }
         try AdminShell.run(command)
     }
 
     static func remove(vendorID: UInt32, productID: UInt32) throws {
-        guard let command = OverrideInstallScript.removeCommand(
-            vendorID: vendorID,
-            productID: productID
-        ) else {
+        guard
+            let command =
+                OverrideInstallScript.removeCommand(
+                    vendorID: vendorID,
+                    productID: productID
+                )
+        else {
             throw OverrideInstallerError.unsafePath
         }
         try AdminShell.run(command)

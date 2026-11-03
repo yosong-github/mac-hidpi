@@ -24,7 +24,8 @@ enum RealDisplayModeSwitcher {
         hiDPI: Bool
     ) -> Result<DisplayModeSummary, HiDPIError> {
         let available = modes(for: displayID)
-        let match = hiDPI
+        let match =
+            hiDPI
             ? HiDPIVariantPicker.hiDPIMode(panel: panel, among: available)
             : HiDPIVariantPicker.lowDPIMode(panel: panel, among: available)
         guard let match else {
@@ -35,7 +36,8 @@ enum RealDisplayModeSwitcher {
                 )
             )
         }
-        let result = hiDPI
+        let result =
+            hiDPI
             ? DisplayModeController.applyBest(
                 displayID: displayID,
                 logicalWidth: panel.width,

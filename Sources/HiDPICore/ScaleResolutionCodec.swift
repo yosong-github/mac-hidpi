@@ -69,7 +69,8 @@ public enum ScaleResolutionCodec {
         var values: [UInt32] = []
         var index = 0
         while index + 4 <= data.count {
-            let word = (UInt32(data[index]) << 24)
+            let word =
+                (UInt32(data[index]) << 24)
                 | (UInt32(data[index + 1]) << 16)
                 | (UInt32(data[index + 2]) << 8)
                 | UInt32(data[index + 3])

@@ -71,15 +71,15 @@ public enum OverrideInstallScript {
             return nil
         }
         return """
-        mkdir -p \(quote(directory)) && \
-        if [ -f \(quote(destination)) ] && [ ! -f \(quote(backup)) ]; then \
-        cp \(quote(destination)) \(quote(backup)); fi && \
-        cp \(quote(sourcePlist)) \(quote(destination)) && \
-        chown root:wheel \(quote(destination)) && \
-        chmod 644 \(quote(destination)) && \
-        /usr/bin/defaults write \(quote(OverrideLocation.windowServerDomain)) \
-        DisplayResolutionEnabled -bool YES
-        """
+            mkdir -p \(quote(directory)) && \
+            if [ -f \(quote(destination)) ] && [ ! -f \(quote(backup)) ]; then \
+            cp \(quote(destination)) \(quote(backup)); fi && \
+            cp \(quote(sourcePlist)) \(quote(destination)) && \
+            chown root:wheel \(quote(destination)) && \
+            chmod 644 \(quote(destination)) && \
+            /usr/bin/defaults write \(quote(OverrideLocation.windowServerDomain)) \
+            DisplayResolutionEnabled -bool YES
+            """
     }
 
     /// Removes only this app's plist. Restores the pre-existing file when we backed it up.
@@ -91,11 +91,11 @@ public enum OverrideInstallScript {
             return nil
         }
         return """
-        if [ -f \(quote(backup)) ]; then \
-        mv \(quote(backup)) \(quote(destination)); \
-        else rm -f \(quote(destination)); fi; \
-        rmdir \(quote(directory)) 2>/dev/null || true
-        """
+            if [ -f \(quote(backup)) ]; then \
+            mv \(quote(backup)) \(quote(destination)); \
+            else rm -f \(quote(destination)); fi; \
+            rmdir \(quote(directory)) 2>/dev/null || true
+            """
     }
 
     private static func isSafeSource(_ path: String) -> Bool {
