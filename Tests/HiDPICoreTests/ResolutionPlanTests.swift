@@ -5,15 +5,15 @@ final class ResolutionPlanTests: XCTestCase {
     func test1440pLadderMatchesRequestedHiDPISizes() {
         let panel = PanelPixels(width: 2560, height: 1440)
         let presets = ResolutionPlan.presets(for: panel)
-        let logical = presets.map { ($0.logicalWidth, $0.logicalHeight) }
+        let logical = presets.map { "\($0.logicalWidth)x\($0.logicalHeight)" }
         XCTAssertEqual(
             logical,
             [
-                (2048, 1152),
-                (1920, 1080),
-                (1706, 960),
-                (1600, 900),
-                (1280, 720),
+                "2048x1152",
+                "1920x1080",
+                "1706x960",
+                "1600x900",
+                "1280x720",
             ]
         )
         for mode in presets {
