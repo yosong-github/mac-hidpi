@@ -66,6 +66,10 @@ struct MenuContent: View {
                 )
             )
             .disabled(model.isBusy)
+            Button("移除 HiDPI 覆盖…") {
+                model.removeOverrides(display)
+            }
+            .disabled(model.isBusy)
             if display.isEnabled {
                 Menu("其他分辨率") {
                     ForEach(snapshot.presets) { mode in

@@ -8,8 +8,9 @@ struct MenuDisplay: Identifiable, Equatable {
     var snapshot: DisplaySnapshot
     var isEnabled: Bool
     var activeMode: ScaledMode?
-    /// Mode read back from the virtual display after it was applied.
+    /// Mode read back after HiDPI was applied, on the real panel or the virtual screen.
     var applied: DisplayModeSummary?
+    var sourceNote: String?
 
     var id: String {
         snapshot.id
@@ -22,8 +23,9 @@ final class AppModel: ObservableObject {
     @Published private(set) var isBusy = false
     @Published var lastError: String?
 
-    private let engine = HiDPIEngine()
+    private let coordinator = HiDPICoordinator()
     private let store = SessionStore()
+    private var knownPanels: [DisplayKey: PanelPixels] = [:]
     private var observer: NSObjectProtocol?
     private var refreshTask: Task<Void, Never>?
     private var updater: SPUStandardUpdaterController?
@@ -61,7 +63,7 @@ final class AppModel: ObservableObject {
             NotificationCenter.default.removeObserver(observer)
         }
         DisplayObserver.stop()
-        engine.disableAll()
+        coordinator.shutdown(displays.map(\.snapshot))
     }
 
     func checkForUpdates() {
@@ -85,10 +87,7 @@ final class AppModel: ObservableObject {
                 return
             }
             run {
-                try await self.engine.enable(
-                    display: display.snapshot,
-                    mode: mode
-                )
+                try await self.coordinator.enable(display.snapshot)
                 self.store.save(
                     self.store.load().upsert(
                         PersistedSession(
@@ -100,7 +99,7 @@ final class AppModel: ObservableObject {
                 )
             }
         } else {
-            engine.disable(key: display.snapshot.key)
+            coordinator.disable(display.snapshot)
             store.save(store.load().remove(display.snapshot.key))
             lastError = nil
             reload()
@@ -112,10 +111,7 @@ final class AppModel: ObservableObject {
             return
         }
         run {
-            try await self.engine.enable(
-                display: display.snapshot,
-                mode: mode
-            )
+            try await self.coordinator.select(display.snapshot, mode: mode)
             self.store.save(
                 self.store.load().upsert(
                     PersistedSession(
@@ -158,15 +154,15 @@ final class AppModel: ObservableObject {
     /// Whole-desktop backing scale. 2× means every window is drawn at twice the pixels, not just text.
     func diagnosticLine(_ display: MenuDisplay) -> String? {
         if let applied = display.applied {
-            return backingLine(applied)
+            return backingLine(applied, note: display.sourceNote)
         }
         if let current = display.snapshot.currentMode {
-            return backingLine(current)
+            return backingLine(current, note: nil)
         }
         return nil
     }
 
-    private func backingLine(_ mode: DisplayModeSummary) -> String {
+    private func backingLine(_ mode: DisplayModeSummary, note: String?) -> String {
         let scale: String
         if mode.pixelWidth == mode.width * 2 && mode.pixelHeight == mode.height * 2 {
             scale = "2×"
@@ -177,7 +173,18 @@ final class AppModel: ObservableObject {
         }
         let points = "\(mode.width) × \(mode.height)"
         let pixels = "\(mode.pixelWidth) × \(mode.pixelHeight)"
-        return "整个桌面 \(scale)：\(points) 点，\(pixels) 像素"
+        let source = note.map { "（\($0)）" } ?? ""
+        return "整个桌面 \(scale)：\(points) 点，\(pixels) 像素\(source)"
+    }
+
+    func removeOverrides(_ display: MenuDisplay) {
+        guard !isBusy else {
+            return
+        }
+        run {
+            try self.coordinator.removeOverrides(display.snapshot)
+            self.store.save(self.store.load().remove(display.snapshot.key))
+        }
     }
 
     private func scheduleRefresh() {
@@ -212,7 +219,7 @@ final class AppModel: ObservableObject {
             reload()
         }
         for session in sessions {
-            if engine.isActive(session.key) {
+            if coordinator.isActive(session.key) {
                 continue
             }
             guard
@@ -231,7 +238,7 @@ final class AppModel: ObservableObject {
                 continue
             }
             do {
-                try await engine.enable(display: display.snapshot, mode: mode)
+                try await coordinator.select(display.snapshot, mode: mode)
                 lastError = nil
             } catch {
                 lastError = (error as? HiDPIError)?.description ?? error.localizedDescription
@@ -257,14 +264,28 @@ final class AppModel: ObservableObject {
 
     private func reload() {
         let snapshots = DisplayEnumerator.snapshots()
-        engine.dropDisconnected(online: snapshots.map(\.key))
+        for snapshot in snapshots where snapshot.currentMode?.isHiDPI != true {
+            knownPanels[snapshot.key] = snapshot.panel
+        }
         displays = snapshots.map { snapshot in
-            let locked = engine.capturedPanel(for: snapshot.key).map { snapshot.locked(to: $0) } ?? snapshot
+            let remembered = knownPanels[snapshot.key] ?? coordinator.capturedPanel(for: snapshot.key)
+            let locked = remembered.map { snapshot.locked(to: $0) } ?? snapshot
+            let activation = coordinator.activation(for: snapshot.key)
             return MenuDisplay(
                 snapshot: locked,
-                isEnabled: engine.isActive(snapshot.key),
-                activeMode: engine.activeMode(for: snapshot.key),
-                applied: engine.appliedSummary(for: snapshot.key)
+                isEnabled: activation != nil,
+                activeMode: activation.map {
+                    ScaledMode(logicalWidth: $0.summary.width, logicalHeight: $0.summary.height, scale: 2)
+                },
+                applied: activation?.summary,
+                sourceNote: activation.map { item in
+                    switch item.source {
+                    case .realDisplay:
+                        return item.note ?? "真实屏幕"
+                    case .virtualScreen:
+                        return item.note ?? "虚拟屏幕"
+                    }
+                }
             )
         }
     }

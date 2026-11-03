@@ -50,6 +50,36 @@ enum DisplayModeController {
         return apply(mode: match.mode, displayID: displayID)
     }
 
+    static func applyExact(
+        displayID: CGDirectDisplayID,
+        width: Int,
+        height: Int,
+        pixelWidth: Int,
+        pixelHeight: Int,
+        refreshRate: Double
+    ) -> Result<Void, HiDPIError> {
+        let pairs = cgModes(for: displayID).map { mode in
+            (mode: mode, summary: summary(of: mode))
+        }
+        let matches = pairs.filter {
+            $0.summary.width == width
+                && $0.summary.height == height
+                && $0.summary.pixelWidth == pixelWidth
+                && $0.summary.pixelHeight == pixelHeight
+        }
+        guard let match = matches.min(by: { lhs, rhs in
+            abs(lhs.summary.refreshRate - refreshRate) < abs(rhs.summary.refreshRate - refreshRate)
+        }) else {
+            return .failure(
+                .modeNotFound(
+                    requested: "\(width)x\(height) pixels \(pixelWidth)x\(pixelHeight)",
+                    available: ModeMatching.describe(pairs.map(\.summary))
+                )
+            )
+        }
+        return apply(mode: match.mode, displayID: displayID)
+    }
+
     private static func apply(mode: CGDisplayMode, displayID: CGDirectDisplayID) -> Result<Void, HiDPIError> {
         var config: CGDisplayConfigRef?
         let began = CGBeginDisplayConfiguration(&config)
