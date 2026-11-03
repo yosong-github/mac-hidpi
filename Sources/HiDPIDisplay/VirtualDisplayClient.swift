@@ -15,19 +15,22 @@ enum VirtualDisplayClient {
             ]
         }
         var error: NSError?
-        guard let display = HDVirtualDisplay(
-            name: spec.name,
-            maxPixelsWide: u32(spec.maxPixelsWide),
-            maxPixelsHigh: u32(spec.maxPixelsHigh),
-            widthMillimeters: spec.widthMillimeters,
-            heightMillimeters: spec.heightMillimeters,
-            vendorID: spec.vendorID,
-            productID: spec.productID,
-            serialNum: spec.serialNumber,
-            hiDPI: spec.hiDPI,
-            modes: modes,
-            error: &error
-        ) else {
+        guard
+            let display =
+                HDVirtualDisplay(
+                    name: spec.name,
+                    maxPixelsWide: u32(spec.maxPixelsWide),
+                    maxPixelsHigh: u32(spec.maxPixelsHigh),
+                    widthMillimeters: spec.widthMillimeters,
+                    heightMillimeters: spec.heightMillimeters,
+                    vendorID: spec.vendorID,
+                    productID: spec.productID,
+                    serialNum: spec.serialNumber,
+                    hiDPI: spec.hiDPI,
+                    modes: modes,
+                    error: &error
+                )
+        else {
             // HDVirtualDisplayErrorAPIUnavailable == 1. Compare the code so a Swift
             // rename of the imported enum cannot hide "API missing".
             if error?.domain == HDVirtualDisplayErrorDomain && error?.code == 1 {

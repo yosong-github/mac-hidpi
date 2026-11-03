@@ -16,12 +16,15 @@ enum DisplayModeController {
         let pairs = cgModes(for: displayID).map { mode in
             (mode: mode, summary: summary(of: mode))
         }
-        guard let best = ModeMatching.bestHiDPIMode(
-            among: pairs.map(\.summary),
-            logicalWidth: logicalWidth,
-            logicalHeight: logicalHeight,
-            refreshRate: refreshRate
-        ) else {
+        guard
+            let best =
+                ModeMatching.bestHiDPIMode(
+                    among: pairs.map(\.summary),
+                    logicalWidth: logicalWidth,
+                    logicalHeight: logicalHeight,
+                    refreshRate: refreshRate
+                )
+        else {
             return .failure(
                 .modeNotFound(
                     requested: "\(logicalWidth)x\(logicalHeight)",
@@ -65,7 +68,7 @@ enum DisplayModeController {
         }
         let array = raw as NSArray
         var modes: [CGDisplayMode] = []
-        for index in 0 ..< array.count {
+        for index in 0..<array.count {
             let item = array[index]
             if let mode = item as? CGDisplayMode {
                 modes.append(mode)

@@ -82,12 +82,19 @@ final class AppModel: ObservableObject {
                 return
             }
             run {
-                try await self.engine.enable(display: display.snapshot, mode: mode)
-                self.store.save(self.store.load().upsert(PersistedSession(
-                    key: display.snapshot.key,
-                    logicalWidth: mode.logicalWidth,
-                    logicalHeight: mode.logicalHeight
-                )))
+                try await self.engine.enable(
+                    display: display.snapshot,
+                    mode: mode
+                )
+                self.store.save(
+                    self.store.load().upsert(
+                        PersistedSession(
+                            key: display.snapshot.key,
+                            logicalWidth: mode.logicalWidth,
+                            logicalHeight: mode.logicalHeight
+                        )
+                    )
+                )
             }
         } else {
             engine.disable(key: display.snapshot.key)
@@ -102,12 +109,19 @@ final class AppModel: ObservableObject {
             return
         }
         run {
-            try await self.engine.enable(display: display.snapshot, mode: mode)
-            self.store.save(self.store.load().upsert(PersistedSession(
-                key: display.snapshot.key,
-                logicalWidth: mode.logicalWidth,
-                logicalHeight: mode.logicalHeight
-            )))
+            try await self.engine.enable(
+                display: display.snapshot,
+                mode: mode
+            )
+            self.store.save(
+                self.store.load().upsert(
+                    PersistedSession(
+                        key: display.snapshot.key,
+                        logicalWidth: mode.logicalWidth,
+                        logicalHeight: mode.logicalHeight
+                    )
+                )
+            )
         }
     }
 
@@ -136,7 +150,9 @@ final class AppModel: ObservableObject {
             }
             let pending = self.store.load().sessions.filter { session in
                 !known.contains(session.key)
-                    && self.displays.contains { $0.snapshot.key == session.key && !$0.isEnabled && $0.snapshot.isEligible }
+                    && self.displays.contains { item in
+                        item.snapshot.key == session.key && !item.isEnabled && item.snapshot.isEligible
+                    }
             }
             guard !pending.isEmpty else {
                 return
@@ -155,14 +171,19 @@ final class AppModel: ObservableObject {
             if engine.isActive(session.key) {
                 continue
             }
-            guard let display = displays.first(where: { $0.snapshot.key == session.key && $0.snapshot.isEligible }) else {
+            guard
+                let display = displays.first(where: { item in
+                    item.snapshot.key == session.key && item.snapshot.isEligible
+                })
+            else {
                 continue
             }
-            let mode = ResolutionPlan.resolveSavedMode(
-                logicalWidth: session.logicalWidth,
-                logicalHeight: session.logicalHeight,
-                presets: display.snapshot.presets
-            ) ?? display.snapshot.defaultMode
+            let mode =
+                ResolutionPlan.resolveSavedMode(
+                    logicalWidth: session.logicalWidth,
+                    logicalHeight: session.logicalHeight,
+                    presets: display.snapshot.presets
+                ) ?? display.snapshot.defaultMode
             guard let mode else {
                 continue
             }

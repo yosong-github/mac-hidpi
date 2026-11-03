@@ -34,10 +34,10 @@ enum AppcastCLI {
     }
 
     private static let usage = """
-    usage: hidpi-appcast --version 1.2.3 --feed-url URL --enclosure-url URL \\
-      --length BYTES --output appcast.xml [--signature ED25519] [--title TEXT] [--notes HTML]
+        usage: hidpi-appcast --version 1.2.3 --feed-url URL --enclosure-url URL \\
+          --length BYTES --output appcast.xml [--signature ED25519] [--title TEXT] [--notes HTML]
 
-    """
+        """
 }
 
 private struct Options {

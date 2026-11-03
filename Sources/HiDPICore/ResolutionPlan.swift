@@ -94,7 +94,8 @@ public enum ResolutionPlan {
     }
 
     public static func sanitizedDisplayName(_ raw: String) -> String {
-        let collapsed = raw
+        let collapsed =
+            raw
             .replacingOccurrences(of: "\n", with: " ")
             .replacingOccurrences(of: "\r", with: " ")
             .trimmingCharacters(in: .whitespacesAndNewlines)

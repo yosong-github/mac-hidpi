@@ -110,8 +110,9 @@ public final class HiDPIEngine {
                 virtual: virtual,
                 mode: mode
             )
+            let logical = "\(mode.logicalWidth)x\(mode.logicalHeight)"
             log.info(
-                "HiDPI on display \(display.displayID) via virtual \(virtual.displayID) at \(mode.logicalWidth)x\(mode.logicalHeight)"
+                "HiDPI on display \(display.displayID) via virtual \(virtual.displayID) at \(logical)"
             )
             return
         }
@@ -153,7 +154,7 @@ public final class HiDPIEngine {
     }
 
     private func waitUntilOnline(_ displayID: CGDirectDisplayID) async -> Bool {
-        for _ in 0 ..< 40 {
+        for _ in 0..<40 {
             if CGDisplayIsOnline(displayID) != 0 {
                 return true
             }
@@ -163,7 +164,7 @@ public final class HiDPIEngine {
     }
 
     private func waitForMatch(displayID: CGDirectDisplayID, mode: ScaledMode, refreshRate: Double) async -> Bool {
-        for _ in 0 ..< 40 {
+        for _ in 0..<40 {
             let modes = DisplayModeController.summaries(for: displayID)
             if ModeMatching.bestHiDPIMode(
                 among: modes,

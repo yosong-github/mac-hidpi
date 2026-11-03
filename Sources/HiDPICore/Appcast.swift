@@ -44,28 +44,29 @@ public enum Appcast {
             signatureAttribute = ""
         }
         let date = rfc822(release.pubDate)
-        let enclosure = "<enclosure url=\"\(escapeAttribute(release.enclosureURL))\" "
+        let enclosure =
+            "<enclosure url=\"\(escapeAttribute(release.enclosureURL))\" "
             + "length=\"\(release.length)\" type=\"application/octet-stream\"\(signatureAttribute)/>"
         return """
-        <?xml version="1.0" encoding="utf-8"?>
-        <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
-          <channel>
-            <title>HiDPI</title>
-            <link>\(escapeText(release.feedURL))</link>
-            <description>HiDPI updates</description>
-            <language>zh-CN</language>
-            <item>
-              <title>\(escapeText(release.title))</title>
-              <pubDate>\(date)</pubDate>
-              <sparkle:version>\(escapeText(release.version))</sparkle:version>
-              <sparkle:shortVersionString>\(escapeText(release.version))</sparkle:shortVersionString>
-              <sparkle:minimumSystemVersion>\(escapeText(release.minimumSystemVersion))</sparkle:minimumSystemVersion>
-              <description><![CDATA[\(cdata(release.notesHTML))]]></description>
-              \(enclosure)
-            </item>
-          </channel>
-        </rss>
-        """
+            <?xml version="1.0" encoding="utf-8"?>
+            <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+              <channel>
+                <title>HiDPI</title>
+                <link>\(escapeText(release.feedURL))</link>
+                <description>HiDPI updates</description>
+                <language>zh-CN</language>
+                <item>
+                  <title>\(escapeText(release.title))</title>
+                  <pubDate>\(date)</pubDate>
+                  <sparkle:version>\(escapeText(release.version))</sparkle:version>
+                  <sparkle:shortVersionString>\(escapeText(release.version))</sparkle:shortVersionString>
+                  <sparkle:minimumSystemVersion>\(escapeText(release.minimumSystemVersion))</sparkle:minimumSystemVersion>
+                  <description><![CDATA[\(cdata(release.notesHTML))]]></description>
+                  \(enclosure)
+                </item>
+              </channel>
+            </rss>
+            """
     }
 
     static func rfc822(_ date: Date) -> String {
