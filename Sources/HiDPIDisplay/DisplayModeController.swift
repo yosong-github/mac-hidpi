@@ -66,11 +66,17 @@ enum DisplayModeController {
         guard let raw = CGDisplayCopyAllDisplayModes(displayID, options) else {
             return []
         }
-        let array = raw as NSArray
+        // CGDisplayMode is a CF type. Bridging the array element with `as` / `as?`
+        // is rejected by the current SDK, so read the pointers directly.
+        let count = CFArrayGetCount(raw)
         var modes: [CGDisplayMode] = []
-        modes.reserveCapacity(array.count)
-        for index in 0..<array.count {
-            modes.append(array[index] as CGDisplayMode)
+        modes.reserveCapacity(count)
+        for index in 0..<count {
+            guard let pointer = CFArrayGetValueAtIndex(raw, index) else {
+                continue
+            }
+            let mode = Unmanaged<CGDisplayMode>.fromOpaque(pointer).takeUnretainedValue()
+            modes.append(mode)
         }
         return modes
     }
