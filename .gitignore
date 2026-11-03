@@ -1,0 +1,16 @@
+.build/
+.swiftpm/
+dist/
+DerivedData/
+*.xcodeproj
+*.xcworkspace
+xcuserdata/
+*.dSYM
+*.app
+*.dmg
+*.zip
+.DS_Store
+*.p12
+*.cer
+sparkle-private-key.txt
+Config/SUPublicEDKey.local
